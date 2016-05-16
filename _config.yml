@@ -1,0 +1,24 @@
+# Site settings
+title: Jiraboy - A JIRA Fan
+email: i@krishnanmk.com
+description: > # this means to ignore newlines until "baseurl:"
+  A simple web log, powered by Jekyll, on JIRA ideas, tips and tricks to make your life easier using JIRA as your product management and issue tracking tool.
+baseurl: "/jiraboy" # the subpath of your site, e.g. /blog
+url: "http://kichnan.github.io" # the base hostname & protocol for your site
+port: 4002
+twitter_username: kichnan
+github_username:  kichnan
+
+# Build settings
+markdown: kramdown
+
+# Markdown settings
+kramdown:
+  input: GFM
+
+# Other settings that may be of use in future
+# include, exclude, show_drafts 
+# defaults (for YAML Front Matter)
+
+# Some useful build command options
+# JEKYLL_ENV=production/development

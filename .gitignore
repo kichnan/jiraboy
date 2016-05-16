@@ -1,3 +1,6 @@
-_site/
-.sass-cache/
+.DS_Store
+.sass-cache
 .jekyll-metadata
+_site/
+_drafts/things-to-do.markdown
+Gemfile.lock

@@ -1,0 +1,123 @@
+---
+layout: post
+title: Installing JIRA Software on Mac OS X
+date: 2015-12-01 18:57:49.000000000 +05:30
+type: post
+author: krishnan
+published: true
+status: publish
+categories: Setups
+tags:
+- beginners guide to jira installation
+- install jira server on mac
+- jira on mac
+- jira software
+- setup jira on mac
+meta:
+  _rest_api_published: '1'
+  _rest_api_client_id: "-1"
+  _publicize_job_id: '17377419647'
+author: krishnan
+---
+<h3>Brief background</h3>
+<p>There are some helpful articles on the net on how to setup JIRA Server on Mac. But for a novice Mac OS X user, the instructions may seem a little difficult to follow. Hence this blog post - for the not too terminal-savvy's to help speed up the setup process.</p>
+<p><span style="text-decoration:underline;">NOTE</span>: Many of the instructions are directly taken from Atlassian's <a href="https://confluence.atlassian.com/jira/installing-jira-on-mac-os-x-191501161.html#confluence-content" target="_blank">official documentation</a>, referred to hereafter as "the document". So, it may be helpful to have that article too alongside, for quick reference or clarification.</p>
+<p>&nbsp;</p>
+<h3>1. Setting up Java on Mac</h3>
+<h4>1.1. Installing Java</h4>
+<p>You need to make sure you have Java 7 or above in your Mac. See <a href="https://confluence.atlassian.com/jira/supported-platforms-207488170.html" target="_blank">JIRA supported platforms</a> for more info. If you already have that in place, you can skip to Step 1.2.</p>
+<p>Here is Java's official <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html" target="_blank">download page</a>. You can download either the JDK or the JRE software for "Mac OS X x64", but based on my experience I would highly recommend you to install JDK to have anxiety-free JIRA setup.</p>
+<h4>1.2 Make sure Java is good to use</h4>
+<p>Atlassian asks you to ensure JAVA_HOME variable is set correctly. If you installed Java SDK as suggested in 1.1 you need not do anything further and can go straight to Step 2. The SDK installer takes care of it, and such that you don't even need the environment variable JAVA_HOME.</p>
+<p>Else, run the following commands to check Java version and the variable name. Again, please refer to the official doc for more details.</p>
+<ol>
+<li>Open your terminal and type (without the "$", of course):
+<pre>$ java -version</pre>
+<ol>
+<li>If you see an output saying something like this, you are good:
+<pre>java version "1.8.0_66"
+Java(TM) SE Runtime Environment (build 1.8.0_66-b17)
+Java HotSpot(TM) 64-Bit Server VM (build 25.66-b17, mixed mode)
+</pre>
+</li>
+<li>If you see an alert like this, "<strong>to use the 'java' command-line tool you need to install a jdk</strong>", then please do go back to Step 1.1. That's going to be the easiest way out for you.</li>
+</ol>
+</li>
+<li>Just as a prep to the next step, this command prints the value of <code>JAVA_HOME</code>.
+<pre>$ echo $JAVA_HOME</pre>
+</li>
+</ol>
+<h4>1.3. Setup JAVA_HOME Environment Variable</h4>
+<p>To explicitly set JAVA_HOME environment variable, you may have to create or update a hidden file, <code>~/.bash_profile</code>. Following are the commands. (Reference: <a href="http://stackoverflow.com/a/22842806" target="_blank">Stack Overflow</a>)</p>
+<pre>$ echo export "JAVA_HOME=\$(/usr/libexec/java_home)" &gt;&gt; ~/.bash_profile
+$ source .bash_profile
+$ echo $JAVA_HOME
+$ #This should output a Java directory. You're all set.</pre>
+<p>&nbsp;</p>
+<h3>2. Download and Install JIRA</h3>
+<ol>
+<li>Download the JIRA <strong>tar.gz</strong> file <a class="external-link" href="http://www.atlassian.com/software/jira/JIRADownloadCenter.jspa" target="_blank" rel="nofollow">here</a>.</li>
+<li>Unzip the downloaded file.</li>
+<li>Move it to another location if you want. I would suggest: <code>/Users/your_user_name/</code>.</li>
+<li>This location is your "JIRA Installation Directory".</li>
+</ol>
+<p>&nbsp;</p>
+<h3>3. Create a Dedicated User Account to Run JIRA</h3>
+<p>At this point, the document asks you to "Set JIRA Home". But, we are going to do that in the next step. We'll create a user account first. The shell commands unfamiliar to me, so I just created it from UI.</p>
+<ol>
+<li>Go to System Preferences &gt; Users and Groups</li>
+<li>Click on the Lock symbol at bottom-left to make changes. (You'll be asked for your current user password. Enter that.)</li>
+<li>Click on the [+] icon right above the lock to create a new account.
+<ol>
+<li>Set New Account to "Sharing Only".</li>
+<li>Add Full Name and Account Name as "jira".</li>
+<li>"Use separate password" and set that up.</li>
+<li>"Create User".</li>
+</ol>
+</li>
+</ol>
+<p>&nbsp;</p>
+<h3>4. Set JIRA Home</h3>
+<p>You can specify any location on a disk for your <a href="https://confluence.atlassian.com/jira/jira-home-directory-189891162.html" target="_blank">JIRA Home Directory</a>, however please read the document's <a href="https://confluence.atlassian.com/jira/installing-jira-on-mac-os-x-191501161.html#InstallingJIRAonMacOSX-2.SetJIRAHome" target="_blank">notes</a> on which locations to avoid and why.</p>
+<p>I would suggest create your JIRA Home Directory in here: <code>/Users/jira/atlassian/jira-home</code>, because else I ran into folder permissions issues when running the website later on.</p>
+<p>You will also be required to specify the location of your JIRA Home Directory in to JIRA's configuration files and set an environment variable:</p>
+<ol>
+<li>Go to <code>&lt;JIRA Installation Directory&gt;/atlassian-jira/WEB-INF/classes/jira-application.properties/jira-application.properties</code> file and open.</li>
+<li>Set the value of the '<code>jira.home</code>' property to your JIRA Home Directory.
+<pre>jira.home = /Users/jira/atlassian/jira-home</pre>
+</li>
+<li>Set an environment variable named <code>JIRA_HOME</code> = &lt;JIRA Home Directory&gt;. Following are the commands:
+<pre>$ echo export JIRA_HOME=/Users/jira/atlassian/jira-home &gt;&gt; ~/.profile
+$ source ~/.profile
+$ echo $JIRA_HOME
+$ #This should print JIRA_HOME value that you just set</pre>
+</li>
+</ol>
+<p>&nbsp;</p>
+<h3>5. Set Folder Permissions</h3>
+<p>As the final steps, you need to set permissions to jira user on the following folders:</p>
+<pre>&lt;JIRA Installation Directory&gt;/logs
+&lt;JIRA Installation Directory&gt;/work
+&lt;JIRA Installation Directory&gt;/temp
+&lt;JIRA Home Directory&gt;</pre>
+<h4>How to set Permissions from UI</h4>
+<p>Go to the folder directory and "Get Info". The bottom-most section defines user permissions for that folder.<br />
+Add new entry to give jira read/write permissions.<br />
+Mark "jira" the owner.<br />
+Make sure you "apply enclosed items" too.<br />
+See the image below for better clarity on steps to follow.</p>
+<p>[caption id="attachment_354" align="alignnone" width="644"]<img class="alignnone size-full wp-image-354" src="{{ site.baseurl }}/assets/jira-folder-permissions1.png" alt="jira-folder-permissions" width="644" height="478" /> Folder permissions - follow the red boxes[/caption]</p>
+<p>&nbsp;</p>
+<h3>7. It's Show Time</h3>
+<p>You're all set now. In your terminal, go to <code>&lt;JIRA Installation Directory&gt;/bin</code>. Switch user to jira and run the application startup script:</p>
+<pre>$ sudo -s -u jira
+$ Password: [] #enter your current account password
+$ ./startup.sh</pre>
+<p>Your JIRA server (on TomCat web server) should start-up. (Woo-hoo!) Go ahead and hit your browser with: <code>http://localhost:8080/</code> and see what you get.</p>
+<h4>Other stuffs</h4>
+<p>Some other notes that might be handy:</p>
+<ul>
+<li>It is a good idea to check your TomCat server logs to confirm that everything went smoothly. It should be located in <code>&lt;JIRA Installation Directory&gt;/logs/catalina.out</code> folder.</li>
+<li>If your port 8080 is already taken, change your JIRA config <em>before</em> running the startup script (<a href="http://confluence.atlassian.com/display/JIRA/Changing+JIRA+Standalone%27s+port" target="_blank">more info</a>).</li>
+<li>If you want to shutdown TomCat server, run the <code>shutdown.sh</code> script.</li>
+</ul>

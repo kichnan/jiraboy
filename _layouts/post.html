@@ -1,0 +1,15 @@
+---
+layout: default
+---
+<h2>{{ page.title }}</h2>
+
+{% assign author = site.data.authors[page.author] %}
+<p class="meta">
+    {{ page.date | date_to_string }}
+    {% if page.author %}
+        • <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <span itemprop="name">{{ author.first_name }} {{ author.last_name }}</span></span>
+    {% endif %}
+</p>
+
+{{ content }}
