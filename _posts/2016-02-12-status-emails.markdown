@@ -63,75 +63,92 @@ Here is a sample JQL [result-set][]. There are a few key things to note in that 
 <a name="processor-fn"></a>The following JavaScript code processes the above JSON and builds me a cleaner JSON that I can use to build my final status mail. Refering to the code below, calling the `processStatus(yourJSONFromAPI)` function will give you the full and final status mail HTML built using [JQuery Templates][jqt]. You may use that HTML output however you want to send your status email to your client/boss.
 _NOTE:_ You may need to modify below code for your use.
 {% highlight js linenos %}
-(function() {
+(function(yourJSONFromAPI) {
+    /**
+     * This is the API to be exposed which creates the status HTML from given `status` json.
+     * @param {json} status - Your json from JIRA API
+     * @param {string} checkDate - The date for which the status has to be created,
+     *  like if you want to create status for comments from 2 days ago, etc.
+     *  Format: yyyy-MM-dd. Default: today's date
+     * @return {string} Final status HTML
+     */
     function processStatus(status, checkDate) {
-        //console.log(status);
         if (!status) return;
+        checkDate = checkDate ? new Date(checkDate) : new Date();
+        checkDate.setHours(0, 0, 0, 0);
 
-        var today = checkDate ? new Date(checkDate) : new Date();
-        today.setHours(0, 0, 0, 0);
-
-        var regexStatus = /\&#91;statuscomment\&#93;/i,
-            regexCommentCleanup = /<span class=\"error\">\&#91;statuscomment\&#93;<\/span>(<br\/>)?/ig,
-            finalStatus = {
-                issues: []
-            };
-        var items = status.issues;
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            var issueDetails = {
-                title: item.fields.summary,
-                link: getMyIssueLink(item.key),
-                description: item.renderedFields.description,
-                comments: [] //array to accomodate multiple comments the same day
-            };
-            var commCount = 0;
-            for (var j = 0; j < item.renderedFields.comment.comments.length; j++) {
-                var comm = item.fields.comment.comments[j],
-                    commR = item.renderedFields.comment.comments[j];
-
-                //collect relevant issue properties together
-                var comdata = {
-                    html: commR.body,
-                    author: comm.author && comm.author.displayName,
-                    date: comm.created,
-                    mailToSubject: escape(issueDetails.title),
-                    mailToBody: ''
-                };
-
-                //comments validations
-                if (!regexStatus.test(comdata.html))
-                    continue; //comment should start with "[statuscomment]"
-                var createdDate = new Date(comdata.date);
-                if (createdDate < today) continue; //comment should be of today
-
-                commCount++;
-                //comment cleanup and add to data
-                comdata.html = comdata.html.replace(regexCommentCleanup, '');
-                comdata.date = ''; //not required anymore
-                
-                //additional reply-to feature for quick reply to issues in status mail
-                comdata.mailToBody = $(comdata.html).text();
-                if (comdata.mailToBody) {
-                    comdata.mailToBody = ' \n\n____________________\n\n'
-                        + comdata.author + ' comment: '
-                        + comdata.mailToBody;
-                    comdata.mailToBody = escape(comdata.mailToBody);
-                }
-                //add to comments
-                issueDetails.comments.push(comdata);
-            }
-            if (!commCount) continue; //no status comments for today
-
-            //generate HTML for given JIRA issue, including issue description and comments
-            finalStatus.issues.push(issueDetails);
+        //initialize final status object after processing `status` and cleaning it up
+        var finalStatus = {
+            issues: []
+        };
+        for (var i = 0; i < status.issues.length; i++) {
+            //loop through each JIRA issue that came up in my JQL
+            var processedIssueDetails = _processIssue(status.issues[i], checkDate);
+            if (processedIssueDetails) finalStatus.issues.push(processedIssueDetails);
         }
-        //console.log(finalStatus);
         
-        //generate final status HTML
+        //generate HTML for all processed JIRA issues, including issue description and comments
         var statusDiv = $('<div></div>');
         $('#jira-status').tmpl(finalStatus).appendTo(statusDiv);
         return statusDiv.html();
+    }
+
+    function _processIssue(item, checkDate) {
+        //initialize and get basic details required for your status
+        var processedIssueDetails = {
+            title: item.fields.summary,
+            link: getMyIssueLink(item.key),
+            description: item.renderedFields.description,
+            comments: [] //array to accomodate multiple comments on same issue on the same day
+        };
+        
+        for (var j = 0; j < item.renderedFields.comment.comments.length; j++) {
+            //loop through each JIRA issue's comments
+            var processedComment = _processIssueComment(item.fields.comment.comments[j], item.renderedFields.comment.comments[j], checkDate);
+            //add to comments if valid
+            if (processedComment) {
+                processedComment.mailToSubject = escape(processedIssueDetails.title);
+                processedIssueDetails.comments.push(processedComment);
+            }
+        }
+        //if no comments at all, do not send anything
+        return processedIssueDetails.comments.length ? processedIssueDetails : null;
+    }
+
+    function _processIssueComment(issueComment, renderedIssueComment, checkDate) {
+        //collect relevant issue properties together
+        var processedComment = {
+            html: renderedIssueComment.body,
+            author: issueComment.author && issueComment.author.displayName,
+            date: issueComment.created,
+            mailToSubject: '', //we'll fill this in parent function
+            mailToBody: ''
+        };
+
+        //your status prefix to be detected in comments
+        var regexStatus = /\&#91;statuscomment\&#93;/i;
+
+        //comments validations
+        if (!regexStatus.test(processedComment.html))
+            return null; //comment should start with "[statuscomment]"
+        var createdDate = new Date(processedComment.date);
+        if (createdDate < checkDate) return null; //comment should be of today
+
+        //regex to detect and remove the `statuscomment` to remove it from final HTML
+        var regexCommentCleanup = /<span class=\"error\">\&#91;statuscomment\&#93;<\/span>(<br\/>)?/ig;
+        //comment cleanup and add to data
+        processedComment.html = processedComment.html.replace(regexCommentCleanup, '');
+        processedComment.date = ''; //not required anymore
+        
+        //additional reply-to feature for quick reply to issues in status mail
+        processedComment.mailToBody = $(processedComment.html).text();
+        if (processedComment.mailToBody) {
+            processedComment.mailToBody = ' \n\n____________________\n\n'
+                + processedComment.author + ' comment: '
+                + processedComment.mailToBody;
+            processedComment.mailToBody = escape(processedComment.mailToBody);
+        }
+        return processedComment;
     }
 
     function getMyIssueLink(key) {
@@ -139,13 +156,13 @@ _NOTE:_ You may need to modify below code for your use.
     }
 
     function htmlEncode(value) {
-        /// <remarks>Create a in-memory div, set it's inner text (which jQuery automatically encodes)
-        /// then grab the encoded contents back out. The div never exists on the page.</remarks>
+        /// Explanation: Create an in-memory div, set it's inner text (which jQuery automatically encodes)
+        /// then grab the encoded contents back out. The div never exists on the page.
         return $('<div/>').text(value).html();
     }
 
-    var finalStatusHTML = processStatus(yourJSONFromAPI);
-    //you can send `finalStatusHTML` as an email using whichever technique you prefer
+    return processStatus(yourJSONFromAPI, "2016-05-19");
+    //You may use the returned HTML as an email using whichever technique you prefer
 })(yourJSONFromAPI);
 {% endhighlight %}
 
@@ -191,7 +208,9 @@ And here are the jQuery templates used to generate the HTML.
 
 
 ## Ending Note
-And that's how you save time.
+The output `finalHTML` generated out of this exercise can be either sent as email (through whichever means you like), or maintain it as a web-page. Your choice.
+
+And that's how you save time!
 
 
 [jqt]:      https://github.com/BorisMoore/jquery-tmpl

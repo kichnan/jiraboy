@@ -16,6 +16,10 @@ markdown: kramdown
 kramdown:
   input: GFM
 
+exclude: [
+  /assets/node_modules
+]
+
 # Other settings that may be of use in future
 # include, exclude, show_drafts 
 # defaults (for YAML Front Matter)
