@@ -2,7 +2,7 @@
 layout: post
 title:  "Creating daily status updates email from JIRA"
 date:   2016-02-09 21:11:30 +0530
-categories: JIRA Tricks
+categories: Reporting
 author: krishnan
 ---
 ## Context
@@ -52,7 +52,10 @@ To fetch issues from JIRA in to your application, you need to use [`/search`][se
 }
 {% endhighlight %}
 
-Here is a sample JQL [result-set][]. There are a few key things to note in that result set:
+Here is a sample JQL [result-set][].
+{% gist kichnan/43959db34e0bb26717b7d66d94555c55 03-jira-api-result-sample.json %}
+
+There are a few key things to note in this result set:
 
 *   It brought only the fields mentioned in `fields` parameter above.
 *   The `startAt` and `maxResults` properties are used for pagination. By default, JIRA API brings only 50 items per query. So, if you have more than 50 issues to process daily, you should tweak your API call accordingly.
@@ -62,155 +65,17 @@ Here is a sample JQL [result-set][]. There are a few key things to note in that 
 ### Process Result
 <a name="processor-fn"></a>The following JavaScript code processes the above JSON and builds me a cleaner JSON that I can use to build my final status mail. Refering to the code below, calling the `processStatus(yourJSONFromAPI)` function will give you the full and final status mail HTML built using [JQuery Templates][jqt]. You may use that HTML output however you want to send your status email to your client/boss.
 _NOTE:_ You may need to modify below code for your use.
-{% highlight js linenos %}
-(function(yourJSONFromAPI) {
-    /**
-     * This is the API to be exposed which creates the status HTML from given `status` json.
-     * @param {json} status - Your json from JIRA API
-     * @param {string} checkDate - The date for which the status has to be created,
-     *  like if you want to create status for comments from 2 days ago, etc.
-     *  Format: yyyy-MM-dd. Default: today's date
-     * @return {string} Final status HTML
-     */
-    function processStatus(status, checkDate) {
-        if (!status) return;
-        checkDate = checkDate ? new Date(checkDate) : new Date();
-        checkDate.setHours(0, 0, 0, 0);
-
-        //initialize final status object after processing `status` and cleaning it up
-        var finalStatus = {
-            issues: []
-        };
-        for (var i = 0; i < status.issues.length; i++) {
-            //loop through each JIRA issue that came up in my JQL
-            var processedIssueDetails = _processIssue(status.issues[i], checkDate);
-            if (processedIssueDetails) finalStatus.issues.push(processedIssueDetails);
-        }
-        
-        //generate HTML for all processed JIRA issues, including issue description and comments
-        var statusDiv = $('<div></div>');
-        $('#jira-status').tmpl(finalStatus).appendTo(statusDiv);
-        return statusDiv.html();
-    }
-
-    function _processIssue(item, checkDate) {
-        //initialize and get basic details required for your status
-        var processedIssueDetails = {
-            title: item.fields.summary,
-            link: getMyIssueLink(item.key),
-            description: item.renderedFields.description,
-            comments: [] //array to accomodate multiple comments on same issue on the same day
-        };
-        
-        for (var j = 0; j < item.renderedFields.comment.comments.length; j++) {
-            //loop through each JIRA issue's comments
-            var processedComment = _processIssueComment(item.fields.comment.comments[j], item.renderedFields.comment.comments[j], checkDate);
-            //add to comments if valid
-            if (processedComment) {
-                processedComment.mailToSubject = escape(processedIssueDetails.title);
-                processedIssueDetails.comments.push(processedComment);
-            }
-        }
-        //if no comments at all, do not send anything
-        return processedIssueDetails.comments.length ? processedIssueDetails : null;
-    }
-
-    function _processIssueComment(issueComment, renderedIssueComment, checkDate) {
-        //collect relevant issue properties together
-        var processedComment = {
-            html: renderedIssueComment.body,
-            author: issueComment.author && issueComment.author.displayName,
-            date: issueComment.created,
-            mailToSubject: '', //we'll fill this in parent function
-            mailToBody: ''
-        };
-
-        //your status prefix to be detected in comments
-        var regexStatus = /\&#91;statuscomment\&#93;/i;
-
-        //comments validations
-        if (!regexStatus.test(processedComment.html))
-            return null; //comment should start with "[statuscomment]"
-        var createdDate = new Date(processedComment.date);
-        if (createdDate < checkDate) return null; //comment should be of today
-
-        //regex to detect and remove the `statuscomment` to remove it from final HTML
-        var regexCommentCleanup = /<span class=\"error\">\&#91;statuscomment\&#93;<\/span>(<br\/>)?/ig;
-        //comment cleanup and add to data
-        processedComment.html = processedComment.html.replace(regexCommentCleanup, '');
-        processedComment.date = ''; //not required anymore
-        
-        //additional reply-to feature for quick reply to issues in status mail
-        processedComment.mailToBody = $(processedComment.html).text();
-        if (processedComment.mailToBody) {
-            processedComment.mailToBody = ' \n\n____________________\n\n'
-                + processedComment.author + ' comment: '
-                + processedComment.mailToBody;
-            processedComment.mailToBody = escape(processedComment.mailToBody);
-        }
-        return processedComment;
-    }
-
-    function getMyIssueLink(key) {
-        return "https://myproject.atlassian.cloud/browse/" + key;
-    }
-
-    function htmlEncode(value) {
-        /// Explanation: Create an in-memory div, set it's inner text (which jQuery automatically encodes)
-        /// then grab the encoded contents back out. The div never exists on the page.
-        return $('<div/>').text(value).html();
-    }
-
-    return processStatus(yourJSONFromAPI, "2016-05-19");
-    //You may use the returned HTML as an email using whichever technique you prefer
-})(yourJSONFromAPI);
-{% endhighlight %}
+{% gist kichnan/43959db34e0bb26717b7d66d94555c55 01-jira-task-status-processor.js %}
 
 And here are the jQuery templates used to generate the HTML.
-{% raw html %}
-    <script id="jira-comments" type="x-jquery-tmpl">
-        <table border="0" cellpadding="1" cellspacing="1" class="issue-article" style="width: 100%;">
-            <tr>
-                <td>{{html description}}</td>
-            </tr>
-            {{each comments}}
-            <tr>
-                <td class="comment">
-                    {{tmpl($value) "#jira-comment"}}
-                </td>
-            </tr>
-            {{/each}}
-        </table>
-    </script>
-    <script id="jira-comment" type="x-jquery-tmpl">
-        <table class="comment-head" width="100%">
-            <tr>
-                <td align="left"><span class="title" style="font-weight: 600; float:left;">Comment:</span></td>
-                <td align="right">
-                    <span class="author"> (By ${author})</span>&nbsp;
-                    <a class="reply-to" href="mailto:[ReplyToEmail]?Subject=RE:%20${mailToSubject}&Body=${mailToBody}">Reply &gt;</a>
-                </td>
-            </tr>
-        </table>
-        <div>{{html html}}</div>
-    </script>
-    <script id="jira-status" type="x-jquery-tmpl">
-        <html>
-            <body>
-            {{each issues}}
-                <a href="${link}">${title}</a><br />
-                {{tmpl($value) "#jira-comments"}}
-            {{/each}}
-            </body>
-        </html>
-    </script>
-{% endraw %}
+{% gist kichnan/43959db34e0bb26717b7d66d94555c55 02-jira-status-html-jqtemplate.html %}
 
 
 ## Ending Note
-The output `finalHTML` generated out of this exercise can be either sent as email (through whichever means you like), or maintain it as a web-page. Your choice.
+The output `finalHTML` generated out of this exercise can be either sent as email (through whichever means you like), or maintained as web pages. The choice is yours.
 
-And that's how you save time!
+And that's how you save time.
+
 
 
 [jqt]:      https://github.com/BorisMoore/jquery-tmpl
@@ -218,4 +83,4 @@ And that's how you save time!
 [JIRA API]: https://docs.atlassian.com/jira/REST/latest/
 [JQL]:      https://confluence.atlassian.com/jira/advanced-searching-179442050.html
 [search]:   https://docs.atlassian.com/jira/REST/latest/#api/2/search
-[result-set]:   {{ site.baseurl }}/assets/jira-status-sample.json
+[result-set]:   https://gist.github.com/kichnan/43959db34e0bb26717b7d66d94555c55#file-03-jira-api-result-sample-json
