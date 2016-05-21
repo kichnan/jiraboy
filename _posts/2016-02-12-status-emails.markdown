@@ -52,8 +52,8 @@ To fetch issues from JIRA in to your application, you need to use [`/search`][se
 }
 {% endhighlight %}
 
-Here is a sample JQL [result-set][].
-{% gist kichnan/43959db34e0bb26717b7d66d94555c55 03-jira-api-result-sample.json %}
+Here is a sample JQL <a name="result-set">result-set</a>.
+{% gist kichnan/4bbf29c798248348506a4f16592cee82 03-jira-api-result-sample.json %}
 
 There are a few key things to note in this result set:
 
@@ -65,14 +65,21 @@ There are a few key things to note in this result set:
 ### Process Result
 <a name="processor-fn"></a>The following JavaScript code processes the above JSON and builds me a cleaner JSON that I can use to build my final status mail. Refering to the code below, calling the `processStatus(yourJSONFromAPI)` function will give you the full and final status mail HTML built using [JQuery Templates][jqt]. You may use that HTML output however you want to send your status email to your client/boss.
 _NOTE:_ You may need to modify below code for your use.
-{% gist kichnan/43959db34e0bb26717b7d66d94555c55 01-jira-task-status-processor.js %}
+{% gist kichnan/4bbf29c798248348506a4f16592cee82 01-jira-task-status-processor.js %}
 
 And here are the jQuery templates used to generate the HTML.
-{% gist kichnan/43959db34e0bb26717b7d66d94555c55 02-jira-status-html-jqtemplate.html %}
+{% gist kichnan/4bbf29c798248348506a4f16592cee82 02-jira-status-template.html %}
+
+Combined together with the [JIRA API result-set](#result-set), you may generate an HTML which finally looks like the following image. Of course, this is a _raw_ presentation. You may add styles to them as you like before sending it to your boss. ;)  
+![Final status HTML]({{ site.baseurl }}/assets/status-emails-01-final-html.png)  
+
+And here is the gist of it:
+{% gist kichnan/4bbf29c798248348506a4f16592cee82 04-jira-status-final.html %}
+
 
 
 ## Ending Note
-The output `finalHTML` generated out of this exercise can be either sent as email (through whichever means you like), or maintained as web pages. The choice is yours.
+So, the output `finalHTML` generated out of this exercise can be used in whichever way you see fit. You may send it as email, or maintain it as web pages.
 
 And that's how you save time.
 
@@ -83,4 +90,3 @@ And that's how you save time.
 [JIRA API]: https://docs.atlassian.com/jira/REST/latest/
 [JQL]:      https://confluence.atlassian.com/jira/advanced-searching-179442050.html
 [search]:   https://docs.atlassian.com/jira/REST/latest/#api/2/search
-[result-set]:   https://gist.github.com/kichnan/43959db34e0bb26717b7d66d94555c55#file-03-jira-api-result-sample-json
