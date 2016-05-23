@@ -63,25 +63,42 @@ There are a few key things to note in this result set:
 
 
 ### Process Result
-<a name="processor-fn"></a>The following JavaScript code processes the above JSON and builds me a cleaner JSON that I can use to build my final status mail. Refering to the code below, calling the `processStatus(yourJSONFromAPI)` function will give you the full and final status mail HTML built using [JQuery Templates][jqt]. You may use that HTML output however you want to send your status email to your client/boss.
-_NOTE:_ You may need to modify below code for your use.
+<a name="processor-fn"></a>`processStatus(data)` function in below `jira-task-status-processor.js` gist is our public API to building the status HTML. What it essentially does is:
+
+1.  Process result set per issue-item per comment
+1.  Check that the comment must begin with `[statuscomment]` -- else do not process
+1.  Check that date of comment must be _after_ `checkDate` passed (`checkDate` defaults to today) -- else do not process
+1.  Strip out `[statuscomment]` tag from comment, as not required anymore
+1.  Prepare an object containing issue title, description, filtered comments content, user details of comments, etc.
+1.  **(Freebie)** Encode comments so that we can put it into email replies automatically when **Repy >** button is clicked. (See further sections below to understand what I'm talking about)
+1.  Pass object to [JQuery Templates](#jqt-gist) (see `jira-status-template.html` gist) that builds the final status mail HTML.
+
 {% gist kichnan/4bbf29c798248348506a4f16592cee82 01-jira-task-status-processor.js %}
 
-And here are the jQuery templates used to generate the HTML.
+<a name="jqt-gist"></a>And here are the jQuery templates used to generate the HTML.
 {% gist kichnan/4bbf29c798248348506a4f16592cee82 02-jira-status-template.html %}
 
-Combined together with the [JIRA API result-set](#result-set), you may generate an HTML which finally looks like the following image. Of course, this is a _raw_ presentation. You may add styles to them as you like before sending it to your boss. ;)  
+#### NOTE
+
+*   `jiraAPIResponseProcessor()` is just a wrapper function.
+*   You may need to modify these gists for your use.
+*   I will try to create an API/library for you in the near future, so that you do not have to deal with these boiler plate codes.
+
+
+## Final Output
+Combined together with the [JIRA API result-set](#result-set), you may generate an HTML which finally looks like the following image. Of course, this is a very _crude_ representation below without any styling whatsoever. So, please do stylize the output as you like, before sending it to your boss. ;)  
 ![Final status HTML]({{ site.baseurl }}/assets/status-emails-01-final-html.png)  
 
 And here is the gist of it:
 {% gist kichnan/4bbf29c798248348506a4f16592cee82 04-jira-status-final.html %}
 
 
-
 ## Ending Note
-So, the output `finalHTML` generated out of this exercise can be used in whichever way you see fit. You may send it as email, or maintain it as web pages.
+It took a few weeks for the team to get used to JIRA's markdown syntax, but once they got the hang of it, life has been harmonious for everyone.
 
-And that's how you save time.
+The output generated out of this exercise (content inside `div-final-html`) has saved me 30 minutes every single day, since Jan 2015, which could be then utilized for other interesting things, like improving project design, get more time to connect with team members or simply go home early on lazy days. :D
+
+And that's how I saved time.
 
 
 
